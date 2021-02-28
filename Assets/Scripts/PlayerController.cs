@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,12 +9,14 @@ public class PlayerController : MonoBehaviour
     private BoxCollider2D _col;
     private LayerMask _walls;
     private LayerMask _floors;
+    private SwapChar SC;
 
     public float Speed;
     public float JumpPower;
     public bool IsGrounded;
     public bool TouchWallToLeft;
     public bool TouchWallToRight;
+    public int swaptimer = 0;
 
     // Start is called before the first frame update
     void Start()
@@ -22,6 +25,7 @@ public class PlayerController : MonoBehaviour
         _col = gameObject.GetComponent<BoxCollider2D>();
         _walls = LayerMask.GetMask("Walls");
         _floors = LayerMask.GetMask("Floors");
+        SC = gameObject.GetComponent<SwapChar>();
     }
 
     // Update is called once per frame
@@ -29,6 +33,7 @@ public class PlayerController : MonoBehaviour
     {
         var side_movement = Input.GetAxisRaw("Horizontal");
         var jump = Input.GetAxisRaw("Jump");
+        var switcheroo = Input.GetAxisRaw("Switchblade");
 
         GroundedRay();
         LeftWallRay();
@@ -36,7 +41,14 @@ public class PlayerController : MonoBehaviour
 
         // Horizontal movement
         Vector2 apply_force = new Vector2(side_movement * Speed, 0) - new Vector2(_rb.velocity.x, 0);
+        // Slightly slowed if wallsliding
+        if (TouchWallToLeft || TouchWallToRight)
+        {
+            apply_force += new Vector2(0, 1);
+        }
+        // Add up the force vectors
         _rb.AddForce(apply_force, ForceMode2D.Impulse);
+
 
         // Jump
         // Edit: Moved to a separate function.
@@ -44,6 +56,15 @@ public class PlayerController : MonoBehaviour
         {
             PlayerJump(jump);
         }
+
+
+        if (switcheroo > 0 && swaptimer < 1)
+        {
+            SC.Swap();
+            swaptimer = 25;
+        }
+        if (swaptimer > 0)
+            swaptimer -= 1;
 
     }
 
@@ -58,20 +79,23 @@ public class PlayerController : MonoBehaviour
             _rb.AddForce(jump_force, ForceMode2D.Impulse);
         }
         //Wall jumping off of a wall to the left
-        else if (TouchWallToLeft)
+        else if (SC.getCharKey() == 1)
         {
-            Debug.Log("wall jump off left");
-            Vector2 walljump_left = new Vector2(JumpPower * 2, JumpPower * 4 / 3) - new Vector2(_rb.velocity.x, 0);
-            _rb.AddForce(walljump_left, ForceMode2D.Impulse);
-            Debug.Log(walljump_left);
-        }
-        //Wall jumping off of a wall to the left
-        else if (TouchWallToRight)
-        {
-            Debug.Log("wall jump off right");
-            Vector2 walljump_right = new Vector2(-JumpPower * 2, JumpPower * 4 / 3) - new Vector2(_rb.velocity.x, 0);
-            _rb.AddForce(walljump_right, ForceMode2D.Impulse);
-            Debug.Log(walljump_right);
+            if (TouchWallToLeft)
+            {
+                Debug.Log("wall jump off left");
+                Vector2 walljump_left = new Vector2(JumpPower * 2, JumpPower * 4 / 3) - new Vector2(_rb.velocity.x, 0);
+                _rb.AddForce(walljump_left, ForceMode2D.Impulse);
+                Debug.Log(walljump_left);
+            }
+            //Wall jumping off of a wall to the left
+            else if (TouchWallToRight)
+            {
+                Debug.Log("wall jump off right");
+                Vector2 walljump_right = new Vector2(-JumpPower * 2, JumpPower * 4 / 3) - new Vector2(_rb.velocity.x, 0);
+                _rb.AddForce(walljump_right, ForceMode2D.Impulse);
+                Debug.Log(walljump_right);
+            }
         }
         //Jump pressed midair
         else
